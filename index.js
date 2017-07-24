@@ -74,6 +74,17 @@ class Client {
       
   }
 
+  static setup(app){
+    return new Promise((resolve,reject)=>{
+      require("./routes")(app);
+      // setupAcl();
+      // setupRoutes();
+      // setupModels();
+      console.log("iniciando Módulo email");
+      resolve();
+    })
+  }
+
 }
 
 module.exports = Client;
