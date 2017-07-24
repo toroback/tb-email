@@ -1,6 +1,6 @@
 {
   "name": "tb-email",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "repository" : { 
-    "type" : "git",
-    "url" : "https://github.com/toroback/tb-email.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toroback/tb-email.git"
   },
   "dependencies": {
     "imap": "^0.8.19",
