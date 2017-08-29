@@ -16,6 +16,9 @@ options ={
 } 
 */
 
+let App;
+let log;
+
 class Client {
   constructor(options){
     this.smtp = {}
@@ -47,6 +50,23 @@ class Client {
     return client.send(mail);
   }
 
+
+  sendFromTemplate(to, templateName, replaceObject){
+    return new Promise((resolve,reject) => {
+       loadTemplates(templateName, replaceObject)
+        .then(texts =>
+          this.send({
+            to      : to,
+            subject : texts.subject,
+            text    : texts.text,
+            html    : texts.html
+          })
+        )
+        .then(resolve)
+        .catch(reject);
+    });
+  }
+
   /**
    * Get email from email repository
    * @param  {mixed} options {
@@ -76,15 +96,45 @@ class Client {
 
   static setup(app){
     return new Promise((resolve,reject)=>{
+      App = app;
+      log = App.log.child({module:'email'});
+
+      log.debug("iniciando Módulo email");
+
       require("./routes")(app);
       // setupAcl();
       // setupRoutes();
       // setupModels();
-      console.log("iniciando Módulo email");
+     
+      if(App.emailOptions && App.emailOptions.configSmtp){
+        App.email = new Client({user: App.emailOptions.configSmtp.user,pass: App.emailOptions.configSmtp.pass});
+      }else{
+        log.warn('Email: email options needs to be configured.')  
+      }
       resolve();
-    })
+
+    });
   }
 
+}
+
+
+function loadTemplates(templateName, replaceObject){
+  return new Promise((resolve, reject) => {
+    let texts = { };
+    Promise.all([
+      App.res.loadEmail(templateName+".html", replaceObject),
+      App.res.loadEmail(templateName+".txt", replaceObject),
+      App.res.loadSubject(templateName, replaceObject)
+      ])
+      .then(resourses =>{
+         texts.html = resourses[0];
+         texts.text = resourses[1];
+         texts.subject = resourses[2];
+         resolve(texts); 
+      })
+      .catch(reject);
+  });
 }
 
 module.exports = Client;

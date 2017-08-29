@@ -14,6 +14,7 @@
     "url": "https://github.com/toroback/tb-email.git"
   },
   "dependencies": {
+    "express": "^4.15.4",
     "imap": "^0.8.19",
     "nodemailer": "^4.0.1"
   }
