@@ -1,0 +1,41 @@
+
+{
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc","closure"]
+    },
+    "source": {
+        "include": [ "./", "./README.md"],
+        "exclude": ["./node_modules"],        
+        "excludePattern": "(^|\\/|\\\\)_"
+    },
+    "plugins": ["./node_modules/jsdoc-route-plugin"],
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false,
+        "default": {
+            "outputSourceFiles": true
+        },
+        "logoFile": "",
+        "dateFormat": "ddd MMM Do YYYY",
+        "outputSourceFiles": true,
+        "outputSourcePath": true,
+        "systemName": "tb-email",
+        "footer": "",
+        "copyright": "Toroback Copyright ©.",
+        "navType": "vertical",
+        "theme": "simplex",
+        "linenums": true,
+        "collapseSymbols": false,
+        "inverseNav": true,
+        "protocol": "html://",
+        "methodHeadingReturns": false
+
+    },
+    "opts": {
+        "template": "templates/default",  
+        "encoding": "utf8",               
+        "destination": "./public/doc",        
+        "recurse": true
+    }
+}
