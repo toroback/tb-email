@@ -43,6 +43,47 @@ El envío de emails se puede realizar únicamente mediante la Class Api del serv
 
 ### **- Envío de un email:**
 
+#### **• REST Api:**
+
+**Petición:**
+
+|HTTP Method|URL|
+|:---:|:---|
+|POST | `https://[domain]:[port]/api/v[apiVersion]/srv/email` |
+
+**- Parámetros Body:**
+
+| Clave | Tipo | Opcional   | Descripción  |
+|---|---|:---:|---|
+|mail|Object| | Objeto con la información del email a enviar|  
+|mail.from|String| X | Remitente del email | 
+|mail.to|String/Array||Array o lista separada por comas de los destinatarios del email| 
+|mail.cc|String/Array|X|Array o lista separada por comas de los destinatarios cc del email| 
+|mail.bcc|String/Array|X|Array o lista separada por comas de los destinatarios bcc del email| 
+|mail.subject|String||Asunto del email| 
+|mail.text|String||Texto plano con el contenido del email| 
+|mail.html|String|X|Contenido del email en formato html| 
+
+**- Ejemplo:**
+
+* Petición:
+
+POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
+
+* BODY: 
+
+```javascript
+  {
+    "mail": {
+      "from": "\"Fred Foo 👻\" <foo@example.com>", 
+      "to": "bar@example.com, baz@example.com",
+      "subject": "Hello ✔",
+      "text": "Hello world?",
+      "html": "<b>Hello world?</b>"    
+    }
+  }
+```
+
 #### **• Código Javascript:**
 
 **- Parámetros:**

@@ -91,8 +91,12 @@ class Client {
    * @return {Promise<Object>}  Promesa con el resultado del envío
    */
   send(mail){
-    let client = new EmailSmtp(this.smtp.options)
-    return client.send(mail);
+    if(mail){
+      let client = new EmailSmtp(this.smtp.options)
+      return client.send(mail);
+    }else{
+      return Promise.reject("Mail data not provided");
+    }
   }
 
   /**
