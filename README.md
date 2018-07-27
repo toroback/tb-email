@@ -166,9 +166,10 @@ Un template debe estar alojado bajo la carpeta **"resources"** de nuestro servid
     - a2s/
     - app/
       - resources/
+        - emails/
 ```
 
-Una vez creada la carpeta **"resources"**, en ella ubicaremos los distintos templates.
+Una vez creada la carpeta **"resources"** es necesario crear una subcarpeta llamada **"emails"**, donde ubicaremos los distintos templates.
 
 Cada template tendrá un identificador y por cada template existirá una carpeta con los distintos archivos que pertenezcan al template. De esta manera, el identificador del  template debe ser el nombre de la carpeta.
 
@@ -194,9 +195,10 @@ Y los nombres de los archivos serán el código del idioma ("en", "es", "fr", et
 root/
   - app/
     - resources/
-      - resgistration/
-        - en.html
-        - en.txt
+      - emails/
+        - resgistration/
+          - en.html
+          - en.txt
 ```
 
 - en.html:

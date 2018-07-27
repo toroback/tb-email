@@ -12,16 +12,16 @@
  * 
  */
 
+let rscPath  = __dirname +'/resources';
 
 let EmailSmtp = require('./lib/email-smtp');
 let EmailImap = require('./lib/email-imap');
-var path = require('path');
-let htmlparser = require("htmlparser2"); 
-let htmlToText = require('html-to-text');
+let EmailSendgrid = require('./lib/email-sendgrid');
+let EmailMailjet = require('./lib/email-mailjet');
+let utils = require('./lib/utils');
 
-const emailsDir ='/email';
-const defLang = 'en_us';
-const defLang2 = 'en';
+let EmailSchema = null; //Esquema de la coleccion tb.email-emails. Inicializado en la funcion init
+
 /*
 options ={
   user:
@@ -37,8 +37,10 @@ options ={
 } 
 */
 
+let moduleConfigId = "emailOptions";
 let App;
 let log;
+
 
 /**
  * Clase que representa un cliente de envío de emails
@@ -48,21 +50,33 @@ class Client {
    /**
    * Crea un cliente de envio de emails
    * @param  {Object} [options]               Objeto con las opciones para el cliente.
-   * @param  {String} options.user            Nombre de usuario ó email del servicio
-   * @param  {String} options.pass            Contraseña del servicio
+   * @param  {Object} options.configSmtp      Objeto con la configuración del servicio de smtp
+   * @param  {String} options.configSmtp.user Nombre de usuario ó email del servicio
+   * @param  {String} options.configSmtp.pass Contraseña del servicio
    * @param  {Object} [options.transport]     Objeto con la configuración del transport
    * @param  {String} options.transport.imap  Imap del transport
    */
   constructor(options){
-    this.smtp = {}
-    this.smtp.options = {
-      user: options.user,
-      pass: options.pass
+    
+    if(options.configSmtp){
+      this.smtp = {}
+      this.smtp.options = {
+        user: options.configSmtp.user,
+        pass: options.configSmtp.pass
+      }
+      this.imap = {}
+      this.imap.options ={
+        user: options.configSmtp.user,
+        pass: options.configSmtp.pass      
+      }
     }
-    this.imap = {}
-    this.imap.options ={
-      user: options.user,
-      pass: options.pass      
+    if(options.sendgrid){
+      this.sendgrid = {};
+      this.sendgrid.options = options.sendgrid;
+    }
+    if(options.mailjet){
+      this.mailjet = {};
+      this.mailjet.options = options.mailjet;
     }
     if (options.transport && options.transport.imap) this.imap.options.transport = options.transport.imap;
   }
@@ -80,38 +94,107 @@ class Client {
    */
   /**
    * Envia un email
-   * @param  {Object} mail Información del email a enviar
-   * @param  {String} [mail.from] Remitente del email 
-   * @param  {String|String[]} mail.to Array o lista separada por comas de los destinatarios del email
-   * @param  {String|String[]} [mail.cc] Array o lista separada por comas de los destinatarios cc del email
-   * @param  {String|String[]} [mail.bcc] Array o lista separada por comas de los destinatarios bcc del email
-   * @param  {String} mail.subject Asunto del email
-   * @param  {String} mail.text Texto plano con el contenido del email
-   * @param  {String} [mail.html] Contenido del email en formato html
+   * @param  {Object} data                                Información del email a enviar
+   * @param  {String} data.service                        Servicio por el que enviar el email
+   * @param  {String|Object} [data.from]                  Remitente del email 
+   * @param  {String} [data.from.name]                    Nombre del remitente del email 
+   * @param  {String} [data.from.email]                   Dirección de correo del remitente del email 
+   * @param  {String|String[]|Object|Object[]} data.to    Array o lista separada por comas de los destinatarios del email
+   * @param  {String} [data.to.name]                      Nombre del destinatario 
+   * @param  {String} data.to.email                       Email del destinatario 
+   * @param  {String|String[]|Object|Object[]} [data.cc]  Array o lista separada por comas de los destinatarios cc del email
+   * @param  {String} [data.cc.name]                      Nombre del destinatario 
+   * @param  {String} data.cc.email                       Email del destinatario 
+   * @param  {String|String[]|Object|Object[]} [data.bcc] Array o lista separada por comas de los destinatarios bcc del email
+   * @param  {String} [data.bcc.name]                     Nombre del destinatario 
+   * @param  {String} data.bcc.email                      Email del destinatario 
+   * @param  {String} data.subject                        Asunto del email
+   * @param  {String} [data.text]                         Texto plano con el contenido del email
+   * @param  {String} [data.html]                         Contenido del email en formato html
+   * @param  {String} [data.templateId]                   Id del template a utilizar
+   * @param  {String} [data.substitutions]                Objeto que contiene pares (key,value) para reempleazar en el template 
    * @return {Promise<Object>}  Promesa con el resultado del envío
    */
-  send(mail){
-    if(mail){
-      let client = new EmailSmtp(this.smtp.options)
-      return client.send(mail);
-    }else{
-      return Promise.reject("Mail data not provided");
-    }
+  send(data){
+    return new Promise((resolve,reject) => {
+      let processedData;
+      let savedDocs;
+      processEmailData(data)
+        .then(res => {  
+          processedData = res;
+          return saveEmails(processedData);
+        })
+        .then(docs =>{
+          savedDocs = docs;
+          return this.getClient(data.service).send(processedData).catch(err =>{
+            return err;
+          });
+        })
+        .then(res =>{
+          App.log.debug("Send response", JSON.stringify(res));
+          let fields = ['to', 'cc', 'bcc'];
+
+          let proms = fields.map( field => {
+            return Promise.all(savedDocs[field].map( (item, index) => {
+              if(res.messages){
+                let message = res.messages[field][index];
+                item.sEmailId = message.id;
+                item.status = message.status;
+              }else{
+                item.status = 'rejected';
+              }
+            
+              item.originalRequest = res.request;
+              item.originalResponse = res.response || {error: res.error};
+              return item.save();
+            })); 
+          });
+          return Promise.all(proms);
+          
+
+        })
+        .then(res => {
+          resolve(res[0].concat(res[1], res[2]));
+        })
+        .catch(reject);
+     
+    });
   }
 
-  /**
+  
+  processWebhook(service, data){
+    return new Promise((resolve,reject) => {
+      this.getClient(service).processWebhook(data)
+        .then(res =>{
+
+          //Los hooks pueden trer un array o un objeto dependiendo del servicio.
+          // Y al mismo tiempo pueden trae más de un evento para un mismo array, entonces tras procesarlos se guardarán de manera secuencial
+  
+          if(!Array.isArray(res)) res = [res];
+          return saveWebhooksData(service, res);
+        })
+        .then(res => {resolve({status: "ok"}); })
+        .catch(err => {
+          App.log.error(err);
+          reject(new Error("Server error"));
+        });
+    });
+  }
+
+  /**@deprecated Usar send()
    * Envía un email desde un template preconfigurado
    * @param  {String|String[]} to     Array o lista separada por comas de los destinatarios del email
    * @param  {String} templateName    Identificador del template a utilizar. 
-   * @param  {Object} [replaceObject] Objeto que contiene pares (key,value) para reempleazar en el email 
+   * @param  {Object} [substitutions] Objeto que contiene pares (key,value) para reempleazar en el email 
    * @param  {String} [lang]          Idioma del email
    * @return {Promise<Object>}  Promesa con el resultado del envío
    */
-  sendFromTemplate(to, templateName, replaceObject, lang){
+  sendFromTemplate(to, templateName, substitutions, lang){
     return new Promise((resolve,reject) => {
-       loadTemplates(templateName, replaceObject, lang)
+       utils.loadTemplates(templateName, substitutions, lang)
         .then(texts =>
           this.send({
+            service : "smtp", 
             to      : to,
             subject : texts.subject,
             text    : texts.text,
@@ -134,7 +217,8 @@ class Client {
    */
   get(options){
     return new Promise((resolve,reject)=>{
-      let client = new EmailImap(this.imap.options)
+      // let client = new EmailImap(this.imap.options)
+      let client = this.getClient('imap');
       client.once('ready',()=>{
         client.get(options)
         .then(resolve)
@@ -150,6 +234,47 @@ class Client {
       
   }
 
+  getClient(service){
+    let client;
+    switch (service) {
+      case 'smtp':
+        // if(!this.smtp) throw new App.err.notFound("Email service not configured:" + service);
+        if(this.smtp && this.smtp.options.user && this.smtp.options.pass)
+          client = new EmailSmtp(this.smtp.options);
+        break;
+      case 'imap':
+        if(this.imap && this.imap.options.user && this.imap.options.pass) 
+          client = new EmailImap(this.imap.options);   
+        break;
+      case 'sendgrid':
+        if(this.sendgrid && this.sendgrid.options.apiKey) 
+          client = new EmailSendgrid(this.sendgrid.options);   
+        break;
+      case 'mailjet':
+        if(this.mailjet && this.mailjet.options.apiKey && this.mailjet.options.apiSecret) 
+          client = new EmailMailjet(this.mailjet.options);   
+        break;
+      default:
+        throw new App.err.notFound("Email service not supported:" + service);
+        // return undefined;
+        // statements_def
+        break;
+    }
+    
+    // check
+    if ( !client ) {
+      let msg;
+      switch ( service ) {
+        case 'smtp':     { msg = 'SMTP library not initialized. Configure emailOptions.configSmtp.user and emailOptions.configSmtp.pass' } break;
+        case 'imap':     { msg = 'IMAP library not initialized. Configure emailOptions.configSmtp.user and emailOptions.configSmtp.pass' } break;
+        case 'mailjet':  { msg = 'MailJet library not initialized. Configure emailOptions.mailjet.apiKey and apiSecret?' } break;
+        case 'sendgrid': { msg = 'SendGrid library not initialized. Configure emailOptions.sendgrid.apiKey?' } break;
+      }
+      throw App.err.badImplementation(msg);
+    }
+    return client
+  } 
+
   /**
    * Setup del módulo. Debe ser llamado antes de crear una instancia
    * @param {Object} _app Objeto App del servidor
@@ -163,112 +288,250 @@ class Client {
       log.debug("iniciando Módulo email");
 
       require("./routes")(app);
-      // setupAcl();
-      // setupRoutes();
-      // setupModels();
-     
-      if(App.emailOptions && App.emailOptions.configSmtp){
-        App.email = new Client({user: App.emailOptions.configSmtp.user,pass: App.emailOptions.configSmtp.pass});
-      }else{
-        log.warn('Email: email options needs to be configured.')  
-      }
-      resolve();
+      
+      loadConfigOptions()
+        .then(emailOptions =>{
+          if(emailOptions){
+            App.email = new Client(emailOptions);  
+          }else{
+            log.warn('Email: email options needs to be configured.')  
+          }
+
+          resolve();
+        })
+        .catch(reject);
 
     });
   }
 
+  //INFO: EL init no se puso como static como el resto de modulos porque este modulo instancia un unico objeto y lo asigna en App.email. Con lo que el metodo init sería de la instancia para que se utilice igual
+  /**
+   * Inicializa los modelos del módulo
+   * @return {Promise} Una promesa
+   */
+   init(){
+    return new Promise( (resolve, reject) => {
+      App.db.setModel('tb.email-emails',rscPath + '/tb.email-emails');
+      EmailSchema = App.db.model('tb.email-emails');
+      resolve();
+    });
+  }
+
+
 }
 
+function processEmailData(data){
+  return new Promise((resolve, reject) => {
+    if(!data) throw App.err.badRequest("Email data not provided");
+    if(!data.service) throw App.err.badRequest("Service not provided");
+    if(!data.to && !data.cc && !data.bcc) throw App.err.badRequest("'to','cc' or 'bcc' field must be provided"); 
+    if(!data.text && !data.html && !data.templateId) throw App.err.badRequest("'text','html' or 'templateId' field must be provided"); 
 
-function loadTemplates(templateName, replaceObject, lang = "en"){
-  return new Promise((resolve, reject) =>{
-    let texts = {};
     Promise.all([
-      loadEmail(templateName, ".html", replaceObject, lang).catch(err => Promise.resolve()),
-      loadEmail(templateName, ".txt", replaceObject, lang).catch(err => Promise.resolve())
-    ])
-      .then(results =>{
-        texts.html = results[0];
-        texts.text = results[1];
+        processRecipients(data.to),
+        processRecipients(data.cc),
+        processRecipients(data.bcc)
+      ])
+      .then(res=>{
+        data.to = res[0];
+        data.cc = res[1];
+        data.bcc = res[2];
 
-        if(!texts.html && !texts.text)
-          throw new Error("Cannot find resource with key: "+ templateName);
+        resolve(data)
+      })
+      .catch(reject);
+    // resolve(data);
+  });
+}
 
-        let prom = [];
-        if(texts.html){
-          prom.push(parseHtmlTitle(texts.html))
-          if(!texts.text)
-            prom.push(htmlToPlainText(texts.html));
+/**
+ * Normaliza un array de destinatarios. 
+ */
+function processRecipients(recipients){
+  return new Promise((resolve, reject) => {
+    if(recipients){
+      if(typeof recipients === "string"){ 
+        //Si es string se comprueba si es una lista separada por comas y se convierte a array de strings. Si no, es que es un email.
+        // let arr = recipients.split(',').map(item => item.trim());
+        let arr = recipients.split(',');
+        let prom = arr.length == 1 ? processRecipient(arr[0]) : processRecipients(arr);
+        prom.then(resolve)
+            .catch(reject);
+        // if(arr.length == 1){
+        //   processRecipient(arr[0])
+        // }else{
+        //   processRecipients(arr)
+        // }
+        // resolve(arr.length == 1 ? arr[0] : arr);
+      }else if(Array.isArray(recipients)){
+        //Si es un array se procesan los distintos elementos. Que pueden ser objeto o string.
+        Promise.all(recipients.map(processRecipient))
+          .then(resolve)
+          .catch(reject);
+      }else if(typeof recipients === 'object'){
+        //Si es un objeto se procesa el objeto individualmente
+         processRecipient(recipients)
+          .then(resolve)
+          .catch(reject);
+      }else{
+        //Si es otro tipo se devuelve error
+        reject(App.err.badRequest('Invalid recipients type'));
+      }
+    }else{
+      resolve();
+    }
+  });
+}
+
+/**
+ * Normaliza un destinatario. 
+ */
+function processRecipient(recipient){
+  return new Promise((resolve, reject) => {
+    if(typeof recipient === "string"){
+      recipient = recipient.trim();
+      if(!utils.validateEmail(recipient)) {
+        reject(invalidRecipientError(recipient));
+      }else{
+        //Si el recipiente es un string es un email.
+        resolve(recipient);
+      }
+    }else if(typeof recipient === 'object'){
+      if(recipient.email && !utils.validateEmail(recipient.email)){
+        reject(invalidRecipientError(recipient.email));
+      }else{
+        //Si es un objeto puede contener email, name y uid.
+        if(recipient.email && recipient.name || !recipient.uid){
+          //Si ya se tiene email y nombre o no hubiera uid de donde tomar esos datos se devuelve el objeto
+          resolve(recipient);
+        }else if(recipient.uid){
+          //Si no hay email o no hay name pero si hay uid, se busca el usuario y se intenta tomar el nombre y el email de él
+          getUser(recipient.uid)
+            .then(user =>{
+              recipient.name = recipient.name || user.fname || user.name;
+              recipient.email = recipient.email || (user.email ? user.email.login : undefined);
+              resolve(recipient);
+            })
+            .catch(reject);
         }
-        
-        return Promise.all(prom);
-      })
-      .then(results =>{
-        if(results.length > 0){
-          texts.subject = results[0];
-          if(results.length > 1)
-            texts.text = results[1];
-        }
-        resolve(texts);
-      })
+      }
+    }else{
+      //Si es otro tipo error
+      reject(App.err.badRequest('Invalid recipient type' + JSON.stringify(recipient)));
+    }
+  });
+}
+
+function invalidRecipientError(recipient){
+  return App.err.badRequest("Invalid recipient '" + recipient+ "'");
+}
+
+function getUser(uid){
+  return App.db.model('users').findById(uid, 'name fname email');
+}
+
+function saveEmails(data){
+  return new Promise((resolve, reject) =>{
+    let commonData = {
+      service: data.service,
+      templateId: data.templateId,
+      status: "pending"
+    }
+    let positionInEmail = 0;
+    let fields = ['to', 'cc', 'bcc'];
+
+    let proms = fields.map( field => {
+      return Promise.all(forceArray(data[field]).map((recipient, index) => {
+        let prom = saveRecipient(commonData, field, index, positionInEmail, recipient);
+        positionInEmail += 1;
+        return prom;
+      }));
+    });
+
+    Promise.all(proms)
+      .then(res =>  resolve({to: res[0], cc: res[1], bcc: res[2] }) )
       .catch(reject);
   });
 }
 
-function parseHtmlTitle(theHtml) {
-  return new Promise((resolve, reject) => {
-    let isTitle = false;
-    let title;
 
-    let parser = new htmlparser.Parser({
-        onopentag:  (name) => { if(name === 'title') isTitle = true; },
-        ontext:     (text) => { if (isTitle) title = text; },
-        onclosetag: (name) => { 
-          if(name === 'title') {
-            isTitle = false;
-            parser.parseComplete();
-          }
-        }
-    }, {decodeEntities: true});
-    parser.write(theHtml);
-    resolve(title);
-  });
-  
+//Funcion que se asegura que la respuesta sea un array. Si el parametro es un array devuelve el array, si es solo un elemento deveulve un array con el elemento y si es undefined devuelve un array vacióío
+function forceArray(receivers){
+  return receivers ? (Array.isArray(receivers) ? receivers : [receivers] ) : [];
 }
 
+function saveRecipient(baseData, recType, recIndex, emailIndex, recipient){
 
-/**
- * Carga un recurso de tipo email
- * @private
- * @param  {String} fileName El nombre del archivo incluyendo la extensión
- * @param  {Object} params   Objeto con los parámetros del texto a reemplazar
- * @return {String}          El recurso cargado
- */
-function loadEmail(fileName, ext, params, lang){
-  return App.res.loadText(path.join(emailsDir, fileName, lang+ext), params)
-    .catch(err => {
-      if(lang != defLang && lang != defLang2){
-        return loadEmail(fileName, ext, params, defLang);
-      }else if (lang === defLang) {
-        return loadEmail(fileName, ext, params, defLang2);
+  return new Promise((resolve, reject) =>{
+    let data = Object.assign({},baseData);
+    data.recType = recType;
+    data.recIndex = recIndex;
+    data.emailIndex = emailIndex;
+    if(typeof recipient === "string"){
+      data.email = recipient;
+    }else{
+      data.email = recipient.email;
+      data.uid   = recipient.uid;
+      data.name  = recipient.name;
+    }
+
+    let emailObj = new EmailSchema(data);
+    emailObj.save()
+      .then(resolve)
+      .catch(reject);
+  });
+}
+
+function saveWebhooksData(service, arr){
+  return new Promise((resolve, reject) =>{
+    saveSingleWebhooksData(service, arr, 0, err =>{
+      if(err) reject(err);
+      else resolve();
+    });
+      
+  });
+}
+
+function saveSingleWebhooksData(service, arr, index, cb){
+  if(arr && arr.length && index < arr.length){
+    let data = arr[index];
+    let query = {service: service, sEmailId: data.msgId};
+    if(data.emailIndex) query.emailIndex = data.emailIndex;
+    
+    EmailSchema.findOne(query)
+      .then(doc =>{
+        if(doc){
+          doc.status = data.status;
+          doc.statusDate = data.date;
+          doc.markModified('status');
+          // doc.statusTime... como setear algo asi para que se asigne al statusLog
+          return doc.save();
+        }else{
+          App.log.warn("tb.email-email for webhook not found:"+ JSON.stringify(data));
+        }
+      })
+      .then(res =>{
+        saveSingleWebhooksData(service, arr, index+1, cb);
+      })
+      .catch(cb)
+  }else{
+    cb();
+  }
+}
+
+function loadConfigOptions(){
+  return new Promise((resolve, reject) => {
+    let Config = App.db.model('tb.configs');
+    Config.findById(moduleConfigId)
+     .then( options => { 
+      if(!options){
+        reject(new Error(moduleConfigId +' not configured'));
       }else{
-        return Promise.reject(err);
+        resolve(options.toJSON());
       }
     });
-}
-
-
-
-function htmlToPlainText(html){
-  return new Promise((resolve, reject) => {
-    var text = htmlToText.fromString(html, {
-        wordwrap: 130
-    });
-
-    resolve(text);
   });
 }
-
 
 
 module.exports = Client;

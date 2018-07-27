@@ -19,13 +19,21 @@ function setupRoutes(App){
 
   router.post('', (req, res,next)=>{
     
-    var mail = req.body.mail;
-    App.email.send(mail)
+    var emailData = req.body;
+    App.email.send(emailData)
       .then(resp => res.status(200).json(resp) )
       .catch(next);
 
     // res.json({resp:"lo hizo"});
   })
+
+  router.post("/webhook",function(req, res, next){
+    let service = req.query.service;
+
+    App.email.processWebhook(service, req.body)
+      .then(resp => res.status(200).json(resp))
+      .catch(next);
+  }); 
 
   App.app.use(`${App.baseRoute}/srv/email`, router)
 

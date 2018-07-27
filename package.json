@@ -14,10 +14,13 @@
     "url": "https://github.com/toroback/tb-email.git"
   },
   "dependencies": {
+    "@sendgrid/mail": "^6.3.1",
     "express": "^4.15.4",
     "html-to-text": "^3.3.0",
     "htmlparser2": "^3.9.2",
     "imap": "^0.8.19",
+    "mongoose": "^4.13.14",
+    "node-mailjet": "^3.2.1",
     "nodemailer": "^4.0.1"
   },
   "devDependencies": {
