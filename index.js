@@ -20,7 +20,7 @@ let EmailSendgrid = require('./lib/email-sendgrid');
 let EmailMailjet = require('./lib/email-mailjet');
 let utils = require('./lib/utils');
 
-let EmailSchema = null; //Esquema de la coleccion tb.email-emails. Inicializado en la funcion init
+let EmailSchema = null; //Esquema de la coleccion tb.email-sent. Inicializado en la funcion init
 
 /*
 options ={
@@ -57,6 +57,7 @@ class Client {
    * @param  {String} options.transport.imap  Imap del transport
    */
   constructor(options){
+    this.clients = [];
     
     if(options.smtp){
       this.smtp = {}
@@ -99,15 +100,18 @@ class Client {
    * @param  {String|Object} [data.from]                  Remitente del email 
    * @param  {String} [data.from.name]                    Nombre del remitente del email 
    * @param  {String} [data.from.email]                   Dirección de correo del remitente del email 
-   * @param  {String|String[]|Object|Object[]} data.to    Array o lista separada por comas de los destinatarios del email
+   * @param  {String|Object|Array} data.to    Array o lista separada por comas de los destinatarios del email
    * @param  {String} [data.to.name]                      Nombre del destinatario 
-   * @param  {String} data.to.email                       Email del destinatario 
-   * @param  {String|String[]|Object|Object[]} [data.cc]  Array o lista separada por comas de los destinatarios cc del email
+   * @param  {String} [data.to.email]                     Email del destinatario 
+   * @param  {String} [data.to.uid]                       Id de usuario del que tomar nombre o email
+   * @param  {String|Object|Array} [data.cc]  Array o lista separada por comas de los destinatarios cc del email
    * @param  {String} [data.cc.name]                      Nombre del destinatario 
-   * @param  {String} data.cc.email                       Email del destinatario 
-   * @param  {String|String[]|Object|Object[]} [data.bcc] Array o lista separada por comas de los destinatarios bcc del email
+   * @param  {String} [data.cc.email]                     Email del destinatario 
+   * @param  {String} [data.cc.uid]                       Id de usuario del que tomar nombre o email
+   * @param  {String|Object|Array} [data.bcc] Array o lista separada por comas de los destinatarios bcc del email
    * @param  {String} [data.bcc.name]                     Nombre del destinatario 
-   * @param  {String} data.bcc.email                      Email del destinatario 
+   * @param  {String} [data.bcc.email]                     Email del destinatario 
+   * @param  {String} [data.bcc.uid]                       Id de usuario del que tomar nombre o email
    * @param  {String} data.subject                        Asunto del email
    * @param  {String} [data.text]                         Texto plano con el contenido del email
    * @param  {String} [data.html]                         Contenido del email en formato html
@@ -115,7 +119,7 @@ class Client {
    * @param  {String} [data.templateLang]                 SOLO smtp - Idioma del email para tomar el template en el idioma correcto. ISO-CODE Por defecto es 'en'
    * @param  {Object} [data.substitutions]                Objeto que contiene pares (key,value) para reempleazar en el template 
    * @param  {Object} [data.serviceData]                  Objeto que contiene pares (key,value) que se enviarán directamente al servicio 
-   * @return {Promise<Array<tb.email-emails>>}  Promesa con el resultado del envío
+   * @return {Promise<Array<tb.email-sent>>}  Promesa con el resultado del envío
    */
   send(data){
     return new Promise((resolve,reject) => {
@@ -238,29 +242,34 @@ class Client {
 
   getClient(service){
     let client;
-    switch (service) {
-      case 'smtp':
-        // if(!this.smtp) throw new App.err.notFound("Email service not configured:" + service);
-        if(this.smtp && this.smtp.options.user && this.smtp.options.pass)
-          client = new EmailSmtp(this.smtp.options);
-        break;
-      case 'imap':
-        if(this.imap && this.imap.options.user && this.imap.options.pass) 
-          client = new EmailImap(this.imap.options);   
-        break;
-      case 'sendgrid':
-        if(this.sendgrid && this.sendgrid.options.apiKey) 
-          client = new EmailSendgrid(this.sendgrid.options);   
-        break;
-      case 'mailjet':
-        if(this.mailjet && this.mailjet.options.apiKey && this.mailjet.options.apiSecret) 
-          client = new EmailMailjet(this.mailjet.options);   
-        break;
-      default:
-        throw new App.err.notFound("Email service not supported:" + service);
-        // return undefined;
-        // statements_def
-        break;
+    if(this.clients && this.clients[service]){
+      client = this.clients[service];
+    }
+    if(!client){
+      switch (service) {
+        case 'smtp':
+          // if(!this.smtp) throw new App.err.notFound("Email service not configured:" + service);
+          if(this.smtp && this.smtp.options.user && this.smtp.options.pass)
+            client = new EmailSmtp(this.smtp.options);
+          break;
+        case 'imap':
+          if(this.imap && this.imap.options.user && this.imap.options.pass) 
+            client = new EmailImap(this.imap.options);   
+          break;
+        case 'sendgrid':
+          if(this.sendgrid && this.sendgrid.options.apiKey) 
+            client = new EmailSendgrid(this.sendgrid.options);   
+          break;
+        case 'mailjet':
+          if(this.mailjet && this.mailjet.options.apiKey && this.mailjet.options.apiSecret) 
+            client = new EmailMailjet(this.mailjet.options);   
+          break;
+        default:
+          throw new App.err.notFound("Email service not supported:" + service);
+          // return undefined;
+          // statements_def
+          break;
+      }
     }
     
     // check
@@ -274,6 +283,8 @@ class Client {
       }
       throw App.err.badImplementation(msg);
     }
+    this.clients[service] = client;
+
     return client
   } 
 
@@ -313,8 +324,8 @@ class Client {
    */
    init(){
     return new Promise( (resolve, reject) => {
-      App.db.setModel('tb.email-emails',rscPath + '/tb.email-emails');
-      EmailSchema = App.db.model('tb.email-emails');
+      App.db.setModel('tb.email-sent',rscPath + '/tb.email-sent');
+      EmailSchema = App.db.model('tb.email-sent');
       resolve();
     });
   }
@@ -326,8 +337,9 @@ function processEmailData(data){
   return new Promise((resolve, reject) => {
     if(!data) throw App.err.badRequest("Email data not provided");
     if(!data.service) throw App.err.badRequest("Service not provided");
-    if(!data.to && !data.cc && !data.bcc) throw App.err.badRequest("'to','cc' or 'bcc' field must be provided"); 
+    if(isEmtyArrayOrUndefined(data.to) && isEmtyArrayOrUndefined(data.cc) && isEmtyArrayOrUndefined(data.bcc)) throw App.err.badRequest("'to','cc' or 'bcc' field must be provided"); 
     if(!data.text && !data.html && !data.templateId) throw App.err.badRequest("'text','html' or 'templateId' field must be provided"); 
+
 
     Promise.all([
         processRecipients(data.to),
@@ -346,38 +358,39 @@ function processEmailData(data){
   });
 }
 
+function isEmtyArrayOrUndefined(field){
+  if(field == undefined){
+    return true;
+  }else if(Array.isArray(field) && field.length == 0){
+    return true;
+  }
+  return false;
+}
+
 /**
  * Normaliza un array de destinatarios. 
  */
 function processRecipients(recipients){
   return new Promise((resolve, reject) => {
-    if(recipients){
+    if(recipients !== undefined){
+      let prom;
       if(typeof recipients === "string"){ 
         //Si es string se comprueba si es una lista separada por comas y se convierte a array de strings. Si no, es que es un email.
         // let arr = recipients.split(',').map(item => item.trim());
         let arr = recipients.split(',');
-        let prom = arr.length == 1 ? processRecipient(arr[0]) : processRecipients(arr);
-        prom.then(resolve)
-            .catch(reject);
-        // if(arr.length == 1){
-        //   processRecipient(arr[0])
-        // }else{
-        //   processRecipients(arr)
-        // }
-        // resolve(arr.length == 1 ? arr[0] : arr);
+        prom = arr.length == 1 ? processRecipient(arr[0]) : processRecipients(arr);
       }else if(Array.isArray(recipients)){
         //Si es un array se procesan los distintos elementos. Que pueden ser objeto o string.
-        Promise.all(recipients.map(processRecipient))
-          .then(resolve)
-          .catch(reject);
+        prom = Promise.all(recipients.map(processRecipient))
       }else if(typeof recipients === 'object'){
         //Si es un objeto se procesa el objeto individualmente
-         processRecipient(recipients)
-          .then(resolve)
+        prom = processRecipient(recipients)
+      }
+
+      if(!prom) reject(App.err.badRequest('Invalid recipients type'));
+      else{
+        prom.then(resolve)
           .catch(reject);
-      }else{
-        //Si es otro tipo se devuelve error
-        reject(App.err.badRequest('Invalid recipients type'));
       }
     }else{
       resolve();
@@ -402,19 +415,23 @@ function processRecipient(recipient){
       if(recipient.email && !utils.validateEmail(recipient.email)){
         reject(invalidRecipientError(recipient.email));
       }else{
-        //Si es un objeto puede contener email, name y uid.
-        if(recipient.email && recipient.name || !recipient.uid){
-          //Si ya se tiene email y nombre o no hubiera uid de donde tomar esos datos se devuelve el objeto
-          resolve(recipient);
-        }else if(recipient.uid){
-          //Si no hay email o no hay name pero si hay uid, se busca el usuario y se intenta tomar el nombre y el email de él
-          getUser(recipient.uid)
-            .then(user =>{
-              recipient.name = recipient.name || user.fname || user.name;
-              recipient.email = recipient.email || (user.email ? user.email.login : undefined);
-              resolve(recipient);
-            })
-            .catch(reject);
+        if(!recipient.email && !recipient.uid){
+          reject(App.err.badRequest('Invalid recipient. \'email\' or \'uid\' field must be provided'));
+        }else{
+          //Si es un objeto puede contener email, name y uid.
+          if(recipient.email && recipient.name || !recipient.uid){
+            //Si ya se tiene email y nombre o no hubiera uid de donde tomar esos datos se devuelve el objeto
+            resolve(recipient);
+          }else if(recipient.uid){
+            //Si no hay email o no hay name pero si hay uid, se busca el usuario y se intenta tomar el nombre y el email de él
+            getUser(recipient.uid)
+              .then(user =>{
+                recipient.name = recipient.name || user.fname || user.name;
+                recipient.email = recipient.email || (user.email ? user.email.login : undefined);
+                resolve(recipient);
+              })
+              .catch(reject);
+          }
         }
       }
     }else{

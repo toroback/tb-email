@@ -1,5 +1,5 @@
 
-let log = App.log.child( { module: 'helper_tb.email-emails' } );
+let log = App.log.child( { module: 'helper_tb.email-sent' } );
 
 let mongoose  = require('mongoose');
 let utils     = require('../lib/utils');

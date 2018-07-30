@@ -7,7 +7,7 @@
 let mongoose  = require('mongoose');
 let Schema    = mongoose.Schema;
 
-var helper   = require("../helpers/tb.email-emails");
+var helper   = require("../helpers/tb.email-sent");
 let utils    = require('../lib/utils');
 
 // TODO: enable edition ONLY for admins
@@ -53,7 +53,7 @@ emailSchema.set('toJSON', { virtuals: true });
 emailSchema.virtual('user', { ref: 'a2s.user', localField: 'uid', foreignField: '_id', justOne: true });
 
 emailSchema.pre('save', function(next, ctx) {  // this can NOT be an arrow function
-  console.log('========>>> HOOK: pre save (tb.email-emails)');
+  console.log('========>>> HOOK: pre save (tb.email-sent)');
   helper.preSaveHook(this)
     .then(next)
     .catch(next);

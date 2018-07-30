@@ -130,13 +130,16 @@ Para estos casos existe el envío de email desde templates. Que permiten predefi
 |from.email|String| | Direccion de correo del remitente del email | 
 |to|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios del email| 
 |to.name|String|X|Nombre del destinatario| 
-|to.email|String||Email del destinatario| 
+|to.email|String|X|Email del destinatario| 
+|to.uid|String|X|Id de usuario del que tomar nombre o email| 
 |cc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios CC del email| 
 |cc.name|String|X|Nombre del destinatario| 
-|cc.email|String||Email del destinatario| 
+|cc.email|String|X|Email del destinatario| 
+|cc.uid|String|X|Id de usuario del que tomar nombre o email| 
 |bcc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios BCC del email| 
 |bcc.name|String|X|Nombre del destinatario| 
-|bcc.email|String||Email del destinatario| 
+|bcc.email|String|X|Email del destinatario| 
+|bcc.uid|String|X|Id de usuario del que tomar nombre o email| 
 |subject|String||Asunto del email| 
 |text|String|X|Texto plano con el contenido del email| 
 |html|String|X|Contenido del email en formato html| 
@@ -149,7 +152,7 @@ Para estos casos existe el envío de email desde templates. Que permiten predefi
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-emails>| | Array con la información del email siendo enviado a cada destinatario  | 
+| - |Array<tb.email-sent>| | Array con la información del email siendo enviado a cada destinatario  | 
 
 **- Ejemplo 1: Ejemplo básico**
 
@@ -216,7 +219,7 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-emails>| | Objeto con los datos del envío del  | 
+| - |Array<tb.email-sent>| | Objeto con los datos del envío del  | 
 
 * BODY: 
 
@@ -242,13 +245,16 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
 |from.email|String| | Direccion de correo del remitente del email | 
 |to|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios del email| 
 |to.name|String|X|Nombre del destinatario| 
-|to.email|String||Email del destinatario| 
+|to.email|String|X|Email del destinatario| 
+|to.uid|String|X|Id de usuario del que tomar nombre o email| 
 |cc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios CC del email| 
 |cc.name|String|X|Nombre del destinatario| 
-|cc.email|String||Email del destinatario| 
+|cc.email|String|X|Email del destinatario| 
+|cc.uid|String|X|Id de usuario del que tomar nombre o email| 
 |bcc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios BCC del email| 
 |bcc.name|String|X|Nombre del destinatario| 
-|bcc.email|String||Email del destinatario| 
+|bcc.email|String|X|Email del destinatario| 
+|bcc.uid|String|X|Id de usuario del que tomar nombre o email| 
 |subject|String||Asunto del email| 
 |text|String|X|Texto plano con el contenido del email| 
 |html|String|X|Contenido del email en formato html| 
@@ -261,7 +267,7 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-emails>| | Array con la información del email siendo enviado a cada destinatario  | 
+| - |Array<tb.email-sent>| | Array con la información del email siendo enviado a cada destinatario  | 
 
 **- Ejemplo:**
       
@@ -448,7 +454,7 @@ This is a paragraph. And this is your name: John
 
 ## **Modelos**
 
-### tb.email-emails
+### tb.email-sent
 
 Modelo de datos que contiene información sobre un email enviado a un cierto destinatario. Si un email fue enviado a más de un destinatario. Apareceran tantos registros con la misma información del email como destinatarios tenga el envío pero indicarán distinta informacion relacionada con cada uno de los destinatarios
 
