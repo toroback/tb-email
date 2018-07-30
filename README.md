@@ -6,42 +6,111 @@ Este módulo permite el envío de emails desde el servidor.
 
 Para utilizar el servicio de envío de emails es necesario configurar como se explicará a continuación.
 
+### **- Servicios disponibles:**
+Para poder utilizar un servicio se utilizarán los identificadores de cada uno de ellos.
+
+Los servicios disponibles para envío de emails son:
+
+- **SMTP**
+  + Identificador: "smtp"
+
+- **SendGrid**
+  + Identificador: "sendgrid"
+  + [Página web](https://sendgrid.com/)
+
+- **MailJet**
+  + Identificador: "mailjet"
+  + [Página web](https://www.mailjet.com/)
 
 ### **- Configuración desde interfaz administrativa:** 
 
-Desde la interfaz web de administración seleccionar la aplicación que se va a configurar.
-
-Una vez en ella acceder a la sección **"Configuración"** y luego a la pestaña **"Email"**.
-
-En dicha pestaña se puede configurar una cuenta de email que será utilizada parar enviar los emails desde el servidor.
-
-Los campos que hay que completar son:
-  - Dirección de correo.
-  - Contraseña.
+*IMPORTANTE: La configuración desde la interfaz no está disponible para la ultima versión de tb-email*
 
 ### **- Configuración manual:**
 
-La configuración manual se realiza en el archivo **"config.json"**.
+La configuración manual se realiza sobre una colección en la base de datos llamada "tb.configs".
 
-Para ello hay que añadir el objeto "emailOptions", si no se tenía anteriormente, y agregar un objeto cuya clave sea "configSmtp" que contendrá usuario y contraseña de la cuenta de email que se utilizará, además es necesario incluir el servicio de la cuenta que se está utilizando. Al completarlo, debería quedar de la siguiente manera:
+Para ello hay que añadir un nuevo documento cuyo id sea el "emailOptions" (Ej. "\_id":"emailOptions"). Dicho documento debe tener un objeto para cada uno de los servicios que se quiera configurar cuya clave sea el identificador del servicio. 
 
-```javascript
-"emailOptions":{
-  "configSmtp":{
-    "user":"myEmail@gmail.com",
-    "pass":"myPassword",
-    "service": "gmail"
-  }
+#### **- Configuración del servicio SMTP:**
+
+Para configurar SMTP se requerirán los siguientes campos:
+
+| Clave | Tipo | Opcional   | Descripción |
+|---|---|:---:|---|
+|user|String||Cuenta de correo utilizada para el envio|
+|pass|String||Contraseña de la cuenta de correo|
+
+Un ejemplo de configuración del servicio *SMTP* sería el siguiente:
+
+```
+{
+    "_id" : "emailOptions",
+     "smtp" : {
+        "user" : "myEmail@gmail.com",
+        "pass" : "myPassword"
+    },
+    …
 }
-```   
+```
+  
+#### **- Configuración del servicio SendGrid:**
+
+Para configurar SMTP se requerirán los siguientes campos:
+
+| Clave | Tipo | Opcional   | Descripción |
+|---|---|:---:|---|
+|apiKey|String||ApiKey proporcionada por el servicio|
+
+Un ejemplo de configuración del servicio *SendGrid* sería el siguiente:
+
+```
+{
+    "_id" : "emailOptions",
+    "sendgrid" : {
+        "apiKey" : "myApiKey"
+    }
+    …
+}
+```
+
+#### **- Configuración del servicio MailJet:**
+
+Para configurar SMTP se requerirán los siguientes campos:
+
+| Clave | Tipo | Opcional   | Descripción |
+|---|---|:---:|---|
+|apiKey|String||ApiKey proporcionada por el servicio|
+|apiSecret|String||Clave secreta proporcionada por el servicio|
+
+Un ejemplo de configuración del servicio *MailJet* sería el siguiente:
+
+```
+{
+    "_id" : "emailOptions",
+    "mailjet" : {
+        "apiKey" : "myApiKey",
+        "apiSecret" : "myApiSecret"
+    }
+    …
+}
+```
 
 ## **Modo de uso**
 
-El envío de emails se puede realizar únicamente mediante la Class Api del servidor utilizando las funciones de **"App.email"**.
+El envío de emails se puede realizar mediante la Class Api del servidor utilizando las funciones de **"App.email"** o a través de una peticion POST al servidor.
 
 ## **Funcionalidades**
 
 ### **- Envío de un email:**
+
+Para enviar un email simple basta con indicar los destinatarios, el asunto y el texto que se va a enviar. 
+
+Pero en ocaciones es necesario enviar un mismo email a diferentes usuarios y en diferentes momentos, como por ejemplo al registrarse un usuario para pedir validación, o simplemente para recordar una contraseña. 
+Para estos casos existe el envío de email desde templates. Que permiten predefinir un contenido de email en formato html permitiendo reemplazar ciertos valores para personalizar el email dependiendo del destinatario.
+
+*Nota:* Para saber más cómo predefinir un email leer "**Creando un email template**".
+
 
 #### **• REST Api:**
 
@@ -55,16 +124,34 @@ El envío de emails se puede realizar únicamente mediante la Class Api del serv
 
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-|mail|Object| | Objeto con la información del email a enviar|  
-|mail.from|String| X | Remitente del email | 
-|mail.to|String/Array||Array o lista separada por comas de los destinatarios del email| 
-|mail.cc|String/Array|X|Array o lista separada por comas de los destinatarios cc del email| 
-|mail.bcc|String/Array|X|Array o lista separada por comas de los destinatarios bcc del email| 
-|mail.subject|String||Asunto del email| 
-|mail.text|String||Texto plano con el contenido del email| 
-|mail.html|String|X|Contenido del email en formato html| 
+|service|String| | Servicio por el que enviar el email ('smtp', 'sendgrid', 'mailjet') | 
+|from|String/Object| X | Remitente del email. Puede ser un String con la dirección de correo o un objeto | 
+|from.name|String| X | Nombre utilizado para el remitente del email| 
+|from.email|String| | Direccion de correo del remitente del email | 
+|to|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios del email| 
+|to.name|String|X|Nombre del destinatario| 
+|to.email|String||Email del destinatario| 
+|cc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios CC del email| 
+|cc.name|String|X|Nombre del destinatario| 
+|cc.email|String||Email del destinatario| 
+|bcc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios BCC del email| 
+|bcc.name|String|X|Nombre del destinatario| 
+|bcc.email|String||Email del destinatario| 
+|subject|String||Asunto del email| 
+|text|String|X|Texto plano con el contenido del email| 
+|html|String|X|Contenido del email en formato html| 
+|templateId|String|X|Id del template a utilizar| 
+|templateLang|String|X|SOLO smtp - Idioma del email para tomar el template en el idioma correcto. ISO-CODE Por defecto es 'en'| 
+|substitutions|Object|X|Objeto que contiene pares (key,value) para reempleazar en el template | 
+|serviceData|Object|X|Objeto que contiene pares (key,value) que se enviarán directo al servicio | 
 
-**- Ejemplo:**
+**- Respuesta:**
+   
+| Clave | Tipo | Opcional   | Descripción  |
+|---|---|:---:|---|
+| - |Array<tb.email-emails>| | Array con la información del email siendo enviado a cada destinatario  | 
+
+**- Ejemplo 1: Ejemplo básico**
 
 * Petición:
 
@@ -74,13 +161,72 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
 
 ```javascript
   {
-    "mail": {
-      "from": "\"Fred Foo 👻\" <foo@example.com>", 
-      "to": "bar@example.com, baz@example.com",
-      "subject": "Hello ✔",
-      "text": "Hello world?",
-      "html": "<b>Hello world?</b>"    
-    }
+    "service":"smtp",
+    "from": "\"Fred Foo 👻\" <foo@example.com>", 
+    "to": "bar@example.com",
+    "subject": "Hello ✔",
+    "text": "Hello world?",
+    "html": "<b>Hello world?</b>"    
+  }
+```
+
+**- Ejemplo 2: Uso de template y lista de destinatarios**
+
+* Petición:
+
+POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
+
+* BODY: 
+
+```javascript
+  {
+    "service":"smtp",
+    "from": "\"Fred Foo 👻\" <foo@example.com>", 
+    "to": "bar@example.com, baz@example.com",
+    "subject": "Hello ✔",
+    "templateId":<myTemplateId> 
+  }
+```
+
+**- Ejemplo 3: Destinatario como objeto**
+
+* Petición:
+
+POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
+
+* BODY: 
+
+```javascript
+  {
+    "service":"smtp",
+    "from": "\"Fred Foo 👻\" <foo@example.com>", 
+    "to": {"name":"Bar", "email":"bar@example.com"},
+    "subject": "Hello ✔",
+    "templateId":<myTemplateId> 
+  }
+```
+
+**- Ejemplo 3: Destinatario como array**
+
+* Petición:
+
+POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
+
+* Respuesta:
+   
+| Clave | Tipo | Opcional   | Descripción  |
+|---|---|:---:|---|
+| - |Array<tb.email-emails>| | Objeto con los datos del envío del  | 
+
+* BODY: 
+
+```javascript
+  {
+    "service":"smtp",
+    "from": "\"Fred Foo 👻\" <foo@example.com>", 
+    "to": [{"name":"Bar", "email":"bar@example.com"}, "other@example.com"],
+    "subject": "Hello ✔",
+    "templateId":<myTemplateId> 
   }
 ```
 
@@ -90,63 +236,51 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-|from|String| X | Remitente del email | 
-|to|String/Array||Array o lista separada por comas de los destinatarios del email| 
-|cc|String/Array|X|Array o lista separada por comas de los destinatarios cc del email| 
-|bcc|String/Array|X|Array o lista separada por comas de los destinatarios bcc del email| 
+|service|String| | Servicio por el que enviar el email ('smtp', 'sendgrid', 'mailjet') | 
+|from|String/Object| X | Remitente del email. Puede ser un String con la dirección de correo o un objeto | 
+|from.name|String| X | Nombre utilizado para el remitente del email| 
+|from.email|String| | Direccion de correo del remitente del email | 
+|to|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios del email| 
+|to.name|String|X|Nombre del destinatario| 
+|to.email|String||Email del destinatario| 
+|cc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios CC del email| 
+|cc.name|String|X|Nombre del destinatario| 
+|cc.email|String||Email del destinatario| 
+|bcc|String/Object/Array|| String con email o lista separada por comas, Objeto con nombre y dirección o Array de emails y objetos de los destinatarios BCC del email| 
+|bcc.name|String|X|Nombre del destinatario| 
+|bcc.email|String||Email del destinatario| 
 |subject|String||Asunto del email| 
-|text|String||Texto plano con el contenido del email| 
+|text|String|X|Texto plano con el contenido del email| 
 |html|String|X|Contenido del email en formato html| 
+|templateId|String|X|Id del template a utilizar| 
+|templateLang|String|X|SOLO smtp - Idioma del email para tomar el template en el idioma correcto. ISO-CODE Por defecto es 'en'| 
+|substitutions|Object|X|Objeto que contiene pares (key,value) para reempleazar en el template | 
+|serviceData|Object|X|Objeto que contiene pares (key,value) que se enviarán directo al servicio | 
+
+**- Respuesta:**
+   
+| Clave | Tipo | Opcional   | Descripción  |
+|---|---|:---:|---|
+| - |Array<tb.email-emails>| | Array con la información del email siendo enviado a cada destinatario  | 
 
 **- Ejemplo:**
       
 ```javascript
+var from = "\"Fred Foo 👻\" <foo@example.com>";
 var to = "receiver1@gmail.com, receiver2@gmail.com" // tambien se puede utilizar [receiver1@gmail.com, receiver2@gmail.com]
 var subject = "Email's subject";
 var text = "Email's" content";
 var html = "<p>Email's" html content</p>";
-var email = {
-  to      : to,
-  subject : subject,
-  text    : text,
-  html    : html
-}
+var email =   {
+    "service":"smtp",
+    "from": from, 
+    "to": to,
+    "subject": subject,
+    "text": text,
+    "html": html   
+  }
 
 App.email.send(email)
-  .then(res => {…})
-  .catch(err => {…})
-```
-
-###  **- Envío de email desde template:**
-
-En ocaciones es necesario enviar un mismo email a diferentes usuarios y en diferentes momentos, como por ejemplo al registrarse un usuario para pedir validación, o simplemente para recordar una contraseña. 
-Para estos casos existe el envío de email desde templates. Que permiten predefinir un contenido de email en formato html permitiendo reemplazar ciertos valores para personalizar el email dependiendo del destinatario.
-
-Para saber más cómo predefinir un email leer "**Creando un email template**".
-
-Para enviar un email desde un template es necesario indicar los destinatarios, el identificador del template, los valores a reemplazar y el idioma. A continuación veremos cómo.
-
-#### **• Código Javascript:**
-
-**- Parámetros:**
-
-| Clave | Tipo | Opcional   | Descripción  |
-|---|---|:---:|---|
-|to|String/Array||Array o lista separada por comas de los destinatarios del email| 
-|templateName|String||Identificador del template a utilizar| 
-|replaceObject|Object|X|Objeto que contiene pares (key,value) para reempleazar en el email | 
-|lang|String|X| Idioma del email| 
-
-**- Ejemplo:**
-      
-```javascript
-var to = "receiver1@gmail.com" 
-var templateId = "registration";  
-var params = {
-  fName: "John",
-  lName: "Smith"
-}
-App.email.sendFromTemplate(to,templateId,params, "en")
   .then(res => {…})
   .catch(err => {…})
 ```
@@ -155,7 +289,9 @@ App.email.sendFromTemplate(to,templateId,params, "en")
 
 Un email template es un archivo que tiene el contenido de un email para utilizar en distintas ocaciones, como el registro de un usuario, recordar una contraseña, dar la bienvenida, etc…. Para crear un template hay que crear archivos con el contenido del email y el subject y ubicarlos en una ruta específica para que sean reconocidos. Los templates permiten definición de variables que pueden ser reemplazadas en el momento del envío para así poder personalizar el email en función del destinatario.
 
-A continuación veremos cómo crear un template y dónde ubicarlo.
+A continuación veremos cómo crear un template y dónde ubicarlo para cuando utilicemos el servicio 'smtp'.
+
+Para servicios distintos el template debe ser creado en la página web del servicio.
 
 ### **- Ubicación de los templates:**
 
@@ -309,4 +445,32 @@ This is a Heading
 
 This is a paragraph. And this is your name: John
 ```
+
+## **Modelos**
+
+### tb.email-emails
+
+Modelo de datos que contiene información sobre un email enviado a un cierto destinatario. Si un email fue enviado a más de un destinatario. Apareceran tantos registros con la misma información del email como destinatarios tenga el envío pero indicarán distinta informacion relacionada con cada uno de los destinatarios
+
+| Clave | Tipo | Opcional | Descripción |
+|---|---|:---:|---|
+|uid|ObjectId||uid Owner user id (a2s.users)|
+|service|String||Service type (payoneer, paypal, etc...)|
+|email|String||Recipient email address|
+|recType|String||Type of the recipient. Values ('to', 'cc', 'bcc')|
+|recIndex|Number||Position of the recipient in the array of its type.|
+|emailIndex|Number|X|Position of the recipient in the email. It will be the index of a recipient after joining the arrays of every recipients type|
+|name|String|X|Name sent with the recipient|
+|templateId|String|X|Template Id of the email|
+|status|String||Last email status. Values ('unknown', 'pending', 'sent', 'rejected', 'processed', 'deferred', 'bounced', 'delivered', 'dropped', 'opened', 'clicked', 'spam', 'unsubscribe')|
+|dStatus|String||Deeper email status. (Ej: If an email was opened and then clicked. The deeper status will be clicked. Because an email can be opened again after a click |
+|statusLog|Array||status change logging|
+|statusLog.status|String||Email status|
+|statusLog.cDate|Date||Email status change timestamp|
+|sEmailId|String|X|Identifier of the email sent by the service|
+|originalResponse|Object|X|Original response received by client when sending an email|
+|originalRequest|Object|X|Original request sent to the client when sending an email|
+|data|Object|X|Object with information related with the service|
+
+
 

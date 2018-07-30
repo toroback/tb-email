@@ -50,24 +50,24 @@ class Client {
    /**
    * Crea un cliente de envio de emails
    * @param  {Object} [options]               Objeto con las opciones para el cliente.
-   * @param  {Object} options.configSmtp      Objeto con la configuración del servicio de smtp
-   * @param  {String} options.configSmtp.user Nombre de usuario ó email del servicio
-   * @param  {String} options.configSmtp.pass Contraseña del servicio
+   * @param  {Object} options.smtp      Objeto con la configuración del servicio de smtp
+   * @param  {String} options.smtp.user Nombre de usuario ó email del servicio
+   * @param  {String} options.smtp.pass Contraseña del servicio
    * @param  {Object} [options.transport]     Objeto con la configuración del transport
    * @param  {String} options.transport.imap  Imap del transport
    */
   constructor(options){
     
-    if(options.configSmtp){
+    if(options.smtp){
       this.smtp = {}
       this.smtp.options = {
-        user: options.configSmtp.user,
-        pass: options.configSmtp.pass
+        user: options.smtp.user,
+        pass: options.smtp.pass
       }
       this.imap = {}
       this.imap.options ={
-        user: options.configSmtp.user,
-        pass: options.configSmtp.pass      
+        user: options.smtp.user,
+        pass: options.smtp.pass      
       }
     }
     if(options.sendgrid){
@@ -112,8 +112,10 @@ class Client {
    * @param  {String} [data.text]                         Texto plano con el contenido del email
    * @param  {String} [data.html]                         Contenido del email en formato html
    * @param  {String} [data.templateId]                   Id del template a utilizar
-   * @param  {String} [data.substitutions]                Objeto que contiene pares (key,value) para reempleazar en el template 
-   * @return {Promise<Object>}  Promesa con el resultado del envío
+   * @param  {String} [data.templateLang]                 SOLO smtp - Idioma del email para tomar el template en el idioma correcto. ISO-CODE Por defecto es 'en'
+   * @param  {Object} [data.substitutions]                Objeto que contiene pares (key,value) para reempleazar en el template 
+   * @param  {Object} [data.serviceData]                  Objeto que contiene pares (key,value) que se enviarán directamente al servicio 
+   * @return {Promise<Array<tb.email-emails>>}  Promesa con el resultado del envío
    */
   send(data){
     return new Promise((resolve,reject) => {
@@ -265,8 +267,8 @@ class Client {
     if ( !client ) {
       let msg;
       switch ( service ) {
-        case 'smtp':     { msg = 'SMTP library not initialized. Configure emailOptions.configSmtp.user and emailOptions.configSmtp.pass' } break;
-        case 'imap':     { msg = 'IMAP library not initialized. Configure emailOptions.configSmtp.user and emailOptions.configSmtp.pass' } break;
+        case 'smtp':     { msg = 'SMTP library not initialized. Configure emailOptions.smtp.user and emailOptions.smtp.pass' } break;
+        case 'imap':     { msg = 'IMAP library not initialized. Configure emailOptions.smtp.user and emailOptions.smtp.pass' } break;
         case 'mailjet':  { msg = 'MailJet library not initialized. Configure emailOptions.mailjet.apiKey and apiSecret?' } break;
         case 'sendgrid': { msg = 'SendGrid library not initialized. Configure emailOptions.sendgrid.apiKey?' } break;
       }

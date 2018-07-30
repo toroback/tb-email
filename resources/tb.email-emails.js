@@ -14,7 +14,7 @@ let utils    = require('../lib/utils');
 let emailSchema  = new Schema ({
   uid:               { type: Schema.Types.ObjectId },   // user id
   service:           { type: String, enum: utils.emailServices },
-  email:             { type: String, required: true },
+  email:             { type: String, required: true, lowercase: true, match: utils.emailRegEx  },
   recType:           { type: String, required: true, enum: ['to', 'cc', 'bcc']},
   recIndex:          { type: Number, required: true}, //Posicion del destinatario dentro del array to, cc o bcc
   emailIndex:        { type: Number}, //Posicion del email para un mismo sEmailId. Usado por sendgrid para identificar un mensaje. El index se asigna a los emails en el siguiente orden 'to'->'cc'->'bcc' 
