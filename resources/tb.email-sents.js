@@ -7,7 +7,7 @@
 let mongoose  = require('mongoose');
 let Schema    = mongoose.Schema;
 
-var helper   = require("../helpers/tb.email-sent");
+var helper   = require("../helpers/tb.email-sents");
 let utils    = require('../lib/utils');
 
 // TODO: enable edition ONLY for admins

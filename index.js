@@ -20,7 +20,7 @@ let EmailSendgrid = require('./lib/email-sendgrid');
 let EmailMailjet = require('./lib/email-mailjet');
 let utils = require('./lib/utils');
 
-let EmailSchema = null; //Esquema de la coleccion tb.email-sent. Inicializado en la funcion init
+let EmailSchema = null; //Esquema de la coleccion tb.email-sents. Inicializado en la funcion init
 
 /*
 options ={
@@ -119,7 +119,7 @@ class Client {
    * @param  {String} [data.templateLang]                 SOLO smtp - Idioma del email para tomar el template en el idioma correcto. ISO-CODE Por defecto es 'en'
    * @param  {Object} [data.substitutions]                Objeto que contiene pares (key,value) para reempleazar en el template 
    * @param  {Object} [data.serviceData]                  Objeto que contiene pares (key,value) que se enviarán directamente al servicio 
-   * @return {Promise<Array<tb.email-sent>>}  Promesa con el resultado del envío
+   * @return {Promise<Array<tb.email-sents>>}  Promesa con el resultado del envío
    */
   send(data){
     return new Promise((resolve,reject) => {
@@ -324,8 +324,8 @@ class Client {
    */
    init(){
     return new Promise( (resolve, reject) => {
-      App.db.setModel('tb.email-sent',rscPath + '/tb.email-sent');
-      EmailSchema = App.db.model('tb.email-sent');
+      App.db.setModel('tb.email-sents',rscPath + '/tb.email-sents');
+      EmailSchema = App.db.model('tb.email-sents');
       resolve();
     });
   }
@@ -526,7 +526,7 @@ function saveSingleWebhooksData(service, arr, index, cb){
           // doc.statusTime... como setear algo asi para que se asigne al statusLog
           return doc.save();
         }else{
-          App.log.warn("tb.email-email for webhook not found:"+ JSON.stringify(data));
+          App.log.warn("tb.email-sents for webhook not found:"+ JSON.stringify(data));
         }
       })
       .then(res =>{

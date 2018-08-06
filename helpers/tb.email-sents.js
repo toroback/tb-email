@@ -51,7 +51,7 @@ function preSaveHook(doc) {
 // post save
 function postSaveHook(doc) {
    return new Promise( (resolve, reject) => {
-    resolve();
+    resolve(); 
   });
 }
 

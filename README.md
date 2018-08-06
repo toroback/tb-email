@@ -152,7 +152,7 @@ Para estos casos existe el envío de email desde templates. Que permiten predefi
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-sent>| | Array con la información del email siendo enviado a cada destinatario  | 
+| - |Array<tb.email-sents>| | Array con la información del email siendo enviado a cada destinatario  | 
 
 **- Ejemplo 1: Ejemplo básico**
 
@@ -219,7 +219,7 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-sent>| | Objeto con los datos del envío del  | 
+| - |Array<tb.email-sents>| | Objeto con los datos del envío del  | 
 
 * BODY: 
 
@@ -267,7 +267,7 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
    
 | Clave | Tipo | Opcional   | Descripción  |
 |---|---|:---:|---|
-| - |Array<tb.email-sent>| | Array con la información del email siendo enviado a cada destinatario  | 
+| - |Array<tb.email-sents>| | Array con la información del email siendo enviado a cada destinatario  | 
 
 **- Ejemplo:**
       
@@ -275,8 +275,8 @@ POST:  `https://a2server.a2system.net:1234/api/v1/srv/email`
 var from = "\"Fred Foo 👻\" <foo@example.com>";
 var to = "receiver1@gmail.com, receiver2@gmail.com" // tambien se puede utilizar [receiver1@gmail.com, receiver2@gmail.com]
 var subject = "Email's subject";
-var text = "Email's" content";
-var html = "<p>Email's" html content</p>";
+var text = "Email's content";
+var html = "<p>Email's html content</p>";
 var email =   {
     "service":"smtp",
     "from": from, 
@@ -454,7 +454,7 @@ This is a paragraph. And this is your name: John
 
 ## **Modelos**
 
-### tb.email-sent
+### tb.email-sents
 
 Modelo de datos que contiene información sobre un email enviado a un cierto destinatario. Si un email fue enviado a más de un destinatario. Apareceran tantos registros con la misma información del email como destinatarios tenga el envío pero indicarán distinta informacion relacionada con cada uno de los destinatarios
 
